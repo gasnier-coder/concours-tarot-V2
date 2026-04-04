@@ -1,6 +1,6 @@
-{
-  "name": "Tarot C.Gasnier",
-  "short_name": "Tarot Concours",
+ 
+  "name": "Concours de Tarot C. Gasnier",
+  "short_name": "Concours Tarot V2",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#064e3b",

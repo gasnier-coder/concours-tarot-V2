@@ -1,5 +1,5 @@
 // --- SERVICE WORKER : VERSION PRO ---
-const CACHE_NAME = 'tarot-pro-v1';
+const CACHE_NAME = 'tarot-pro-v2';
 
 // On liste tout ce que l'appli doit mémoriser
 const ASSETS = [
