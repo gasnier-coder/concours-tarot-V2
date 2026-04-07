@@ -24,7 +24,6 @@
         .tab-btn { padding: 10px 18px; font-weight: bold; border-radius: 10px; cursor: pointer; transition: 0.3s; text-transform: uppercase; font-size: 0.75rem; }
         .active { background: #facc15 !important; color: black !important; }
         
-        /* Alignement des positions */
         .pos-badge { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; width: 45px; display: inline-block; }
         
         .color-0 { color: #facc15; } /* NORD */
@@ -32,7 +31,9 @@
         .color-2 { color: #60a5fa; } /* EST */
         .color-3 { color: #f472b6; } /* OUEST */
 
-        .nom-joueur { font-size: 0.85rem; color: white; text-transform: uppercase; font-weight: 700; truncate; }
+        .nom-joueur { font-size: 0.85rem; color: white; text-transform: uppercase; font-weight: 700; }
+        .editable-name { background: transparent; border: none; color: inherit; text-transform: uppercase; font-weight: 700; width: 100%; outline: none; border-bottom: 1px dotted rgba(255,255,255,0.2); }
+        .editable-name:focus { border-bottom: 1px solid #facc15; background: rgba(255,255,255,0.05); }
         
         .table-group { background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3); border-radius: 12px; padding: 8px; margin-bottom: 12px; }
         .table-title { color: #facc15; font-size: 10px; font-weight: 900; text-transform: uppercase; margin-bottom: 6px; display: flex; justify-content: space-between; }
@@ -81,12 +82,25 @@
                 </select>
                 <button onclick="addPlayer()" class="bg-emerald-500 px-6 rounded-lg font-black text-xl hover:bg-emerald-400 transition">+</button>
             </div>
-            <textarea id="importArea" rows="3" class="w-full p-3 mb-3 text-black font-bold text-xs rounded-xl outline-none" placeholder="Import rapide (noms)..."></textarea>
-            <button onclick="autoDistribute()" class="w-full bg-purple-600 hover:bg-purple-500 py-2 rounded-lg font-black text-white uppercase text-[10px]">Dispatcher N/S/E/O</button>
+            
+            <h2 class="text-[10px] font-black text-blue-400 uppercase mb-2 tracking-widest">📋 Importation Rapide</h2>
+            <textarea id="importArea" rows="2" class="w-full p-3 mb-3 text-black font-bold text-xs rounded-xl outline-none" placeholder="Collez une liste ici..."></textarea>
+            
+            <div class="grid grid-cols-1 gap-2 mb-3">
+                <label class="bg-blue-900/50 hover:bg-blue-800 py-2 rounded-lg font-black text-blue-200 uppercase text-[10px] text-center cursor-pointer border border-blue-500/30 transition">
+                    📂 Importer Fichier (CSV / TXT)
+                    <input type="file" id="fileInput" accept=".csv,.txt" class="hidden" onchange="importFromFile(this)">
+                </label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="autoDistribute()" class="bg-purple-600 hover:bg-purple-500 py-2 rounded-lg font-black text-white uppercase text-[10px]">Dispatcher N/S/E/O</button>
+                <button onclick="saveData(true)" class="bg-blue-600 hover:bg-blue-500 py-2 rounded-lg font-black text-white uppercase text-[10px]">💾 Sauvegarder</button>
+            </div>
         </div>
 
         <div class="bg-black/20 p-6 rounded-2xl border border-white/5">
-            <h2 class="text-[10px] font-black text-yellow-500 uppercase mb-4 italic tracking-widest">📋 Organisation</h2>
+            <h2 class="text-[10px] font-black text-yellow-500 uppercase mb-4 italic tracking-widest">📋 Organisation (Modifiable)</h2>
             <div id="playerList" class="max-h-[500px] overflow-y-auto pr-2"></div>
             <div class="mt-4 border-t border-white/10 pt-2 text-right">
                 <div class="font-black text-yellow-400 text-xs italic" id="statCount">0 Joueurs</div>
@@ -110,10 +124,32 @@
         let totalParties = parseInt(localStorage.getItem('tarot_nb_parties')) || 4;
         let currentIdx = 0;
 
-        function saveData() {
+        function saveData(alertUser = false) {
             localStorage.setItem('tarot_raw_players', JSON.stringify(rawPlayers));
             localStorage.setItem('tarot_scores_v3', JSON.stringify(scoresData));
             localStorage.setItem('tarot_nb_parties', totalParties);
+            if(alertUser) alert("Données sauvegardées !");
+        }
+
+        // --- NOUVELLE FONCTION IMPORT DE FICHIER ---
+        function importFromFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                // On sépare par ligne, on nettoie les virgules/points-virgules si c'est du CSV
+                const lines = content.split(/\r?\n/).filter(l => l.trim() !== "");
+                lines.forEach((line, idx) => {
+                    // Si CSV, on prend la première colonne (le nom)
+                    const name = line.split(/[;,]/)[0].trim().toUpperCase();
+                    if(name) rawPlayers.push({ nom: name, pos: idx % 4 });
+                });
+                saveData();
+                renderInscriptions();
+                input.value = ""; // Reset de l'input
+            };
+            reader.readAsText(file);
         }
 
         function getOrganizedData() {
@@ -160,9 +196,11 @@
         function renderPlayerRow(p) {
             const originalIdx = rawPlayers.indexOf(p);
             return `<div class="flex justify-between bg-white/5 p-1.5 px-3 rounded-lg items-center border border-white/5 gap-2 mb-1">
-                <div class="flex items-center gap-2 overflow-hidden">
+                <div class="flex items-center gap-2 flex-1 overflow-hidden">
                     <span class="pos-badge color-${p.pos}">${["NORD","SUD","EST","OUEST"][p.pos]}</span>
-                    <span class="nom-joueur truncate">${p.nom}</span>
+                    <input type="text" value="${p.nom}" 
+                        onchange="updatePlayerName(${originalIdx}, this.value)" 
+                        class="editable-name color-${p.pos}">
                 </div>
                 <div class="flex items-center gap-2">
                     <select onchange="updatePlayerPos(${originalIdx}, this.value)" class="bg-black/40 color-${p.pos} text-[9px] font-black rounded px-1.5 outline-none">
@@ -182,6 +220,7 @@
             if (name) { rawPlayers.push({ nom: name, pos: pos }); document.getElementById('addName').value = ""; saveData(); renderInscriptions(); }
         }
 
+        function updatePlayerName(idx, newName) { rawPlayers[idx].nom = newName.trim().toUpperCase(); saveData(); }
         function updatePlayerPos(idx, newPos) { rawPlayers[idx].pos = parseInt(newPos); saveData(); renderInscriptions(); }
         function removePlayer(idx) { rawPlayers.splice(idx, 1); saveData(); renderInscriptions(); }
 
@@ -290,6 +329,9 @@
         function changeNbParties(v) { totalParties = parseInt(v); saveData(); if (currentIdx >= totalParties) currentIdx = 0; if (!document.getElementById('sec-parties').classList.contains('hidden')) renderPartie(currentIdx); }
 
         document.addEventListener('DOMContentLoaded', renderInscriptions);
+		  <img src="C:\Users\cga35\Downloads/EXCUSE CASTEL 2.png"  
+  width="200"
+  height="auto" />
     </script>
 </body>
 </html>
